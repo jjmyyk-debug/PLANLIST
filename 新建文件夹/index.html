@@ -1,0 +1,2933 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>移动计划表工具</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- 引入Chart.js用于统计图表 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary-color: #4b6cb7;
+            --secondary-color: #6c757d;
+            --success-color: #28a745;
+            --danger-color: #dc3545;
+            --warning-color: #ffc107;
+            --light-color: #f8f9fa;
+            --dark-color: #343a40;
+            --border-radius: 12px;
+            --box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            --transition: all 0.3s ease;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+        }
+        
+        body {
+            background-color: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+            padding: 0;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        /* 适配iPhone 11的屏幕尺寸 */
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
+            padding: 16px;
+            padding-bottom: 90px; /* 为底部按钮留出空间 */
+        }
+        
+        header {
+            text-align: center;
+            padding: 20px 16px;
+            background: linear-gradient(135deg, #4b6cb7 0%, #182848 100%);
+            color: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            margin-bottom: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        header:after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #ff9966, #ff5e62);
+        }
+        
+        header h1 {
+            font-size: 1.8rem;
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+        
+        header p {
+            font-size: 0.95rem;
+            opacity: 0.9;
+            margin: 0 auto;
+            max-width: 90%;
+        }
+        
+        .card {
+            background: white;
+            border-radius: var(--border-radius);
+            padding: 20px;
+            box-shadow: var(--box-shadow);
+            margin-bottom: 20px;
+            transition: var(--transition);
+        }
+        
+        .card-title {
+            font-size: 1.3rem;
+            color: #2c3e50;
+            margin-bottom: 16px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f0f2f5;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .card-title i {
+            color: var(--primary-color);
+        }
+        
+        textarea {
+            width: 100%;
+            min-height: 200px;
+            padding: 15px;
+            border: 2px solid #e1e5eb;
+            border-radius: 8px;
+            font-size: 1rem;
+            line-height: 1.6;
+            resize: none;
+            transition: var(--transition);
+            font-size: 16px; /* 防止iOS缩放 */
+        }
+        
+        textarea:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+        
+        .button-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 20px;
+        }
+        
+        .btn {
+            padding: 14px 20px;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            flex: 1;
+            min-width: 140px;
+            box-shadow: 0 3px 6px rgba(75, 108, 183, 0.2);
+        }
+        
+        .btn:hover, .btn:active {
+            background: #3a5795;
+            transform: translateY(-2px);
+        }
+        
+        .btn-secondary {
+            background: var(--secondary-color);
+        }
+        
+        .btn-secondary:hover, .btn-secondary:active {
+            background: #5a6268;
+        }
+        
+        .btn-success {
+            background: var(--success-color);
+        }
+        
+        .btn-success:hover, .btn-success:active {
+            background: #218838;
+        }
+        
+        .btn-export {
+            background: #17a2b8;
+        }
+        
+        .btn-export:hover, .btn-export:active {
+            background: #138496;
+        }
+        
+        .btn-warning {
+            background: var(--warning-color);
+            color: #212529;
+        }
+        
+        .btn-warning:hover, .btn-warning:active {
+            background: #e0a800;
+        }
+        
+        .btn-danger {
+            background: var(--danger-color);
+        }
+        
+        .btn-danger:hover, .btn-danger:active {
+            background: #c82333;
+        }
+        
+        .btn-info {
+            background: #6f42c1;
+        }
+        
+        .btn-info:hover, .btn-info:active {
+            background: #5a369c;
+        }
+        
+        .plan-list {
+            width: 100%;
+        }
+        
+        .plan-item {
+            background: white;
+            border-radius: 10px;
+            padding: 16px;
+            margin-bottom: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            border-left: 4px solid var(--primary-color);
+            transition: var(--transition);
+            position: relative;
+        }
+        
+        .plan-item.completed {
+            background-color: #f0fff4;
+            border-left-color: var(--success-color);
+            opacity: 0.9;
+        }
+        
+        .plan-item.urgent {
+            border-left-color: var(--danger-color);
+            animation: pulse 2s infinite;
+        }
+        
+        .plan-item.expired {
+            border-left-color: #dc3545;
+            background-color: #fff5f5;
+        }
+        
+        .plan-item.selected {
+            background-color: #e8f4fd;
+            box-shadow: 0 2px 10px rgba(75, 108, 183, 0.2);
+        }
+        
+        .plan-item.short-term {
+            border-left-color: #ff9966;
+        }
+        
+        .plan-item.mid-term {
+            border-left-color: #4ecdc4;
+        }
+        
+        .plan-item.long-term {
+            border-left-color: #6a0572;
+        }
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.4); }
+            70% { box-shadow: 0 0 0 6px rgba(220, 53, 69, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
+        }
+        
+        .plan-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+        }
+        
+        .plan-time {
+            font-weight: 600;
+            color: var(--primary-color);
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .plan-time i {
+            font-size: 0.9rem;
+        }
+        
+        .plan-status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .plan-content {
+            margin-bottom: 12px;
+            padding: 10px;
+            border-radius: 6px;
+            background-color: #f8f9fa;
+            min-height: 60px;
+            font-size: 1rem;
+            line-height: 1.5;
+            outline: none;
+            transition: var(--transition);
+        }
+        
+        .plan-content:focus {
+            background-color: #fff;
+            box-shadow: 0 0 0 2px rgba(75, 108, 183, 0.2);
+        }
+        
+        .plan-notes {
+            padding: 8px;
+            border-radius: 6px;
+            background-color: #f8f9fa;
+            font-size: 0.9rem;
+            color: #6c757d;
+            min-height: 40px;
+            outline: none;
+            transition: var(--transition);
+            border: 1px dashed #dee2e6;
+        }
+        
+        .plan-notes:focus {
+            background-color: #fff;
+            border-style: solid;
+            border-color: var(--primary-color);
+        }
+        
+        .checkbox-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .custom-checkbox {
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            accent-color: var(--success-color);
+        }
+        
+        .batch-checkbox {
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
+            cursor: pointer;
+            accent-color: var(--primary-color);
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #6c757d;
+        }
+        
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            color: #adb5bd;
+        }
+        
+        .instructions {
+            background-color: #e8f4fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            font-size: 0.9rem;
+        }
+        
+        .instructions h3 {
+            color: #2c3e50;
+            margin-bottom: 8px;
+            font-size: 1rem;
+        }
+        
+        .instructions ul {
+            padding-left: 20px;
+        }
+        
+        .instructions li {
+            margin-bottom: 6px;
+            font-size: 0.9rem;
+        }
+        
+        .time-inputs {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .time-input {
+            padding: 10px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            font-size: 1rem;
+            flex: 1;
+            min-width: 100px;
+        }
+        
+        .date-range-inputs {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 12px;
+        }
+        
+        .date-range-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .date-range-label {
+            font-size: 0.9rem;
+            color: #6c757d;
+            min-width: 60px;
+        }
+        
+        .date-input {
+            padding: 10px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            font-size: 1rem;
+            flex: 1;
+        }
+        
+        .plan-actions {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid #e9ecef;
+        }
+        
+        .action-btn {
+            background: none;
+            border: none;
+            color: var(--secondary-color);
+            cursor: pointer;
+            font-size: 1.1rem;
+            transition: var(--transition);
+            padding: 5px 10px;
+            border-radius: 4px;
+        }
+        
+        .action-btn:hover, .action-btn:active {
+            background-color: #f8f9fa;
+            color: var(--primary-color);
+        }
+        
+        .action-btn.delete:hover, .action-btn.delete:active {
+            color: var(--danger-color);
+        }
+        
+        .reason-selector {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px dashed #dee2e6;
+        }
+        
+        .reason-select {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            background-color: #f8f9fa;
+        }
+        
+        .other-reason-input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            margin-top: 8px;
+            display: none;
+        }
+        
+        .reason-label {
+            font-size: 0.85rem;
+            color: #6c757d;
+            margin-bottom: 5px;
+            display: block;
+        }
+        
+        .batch-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 12px 15px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .batch-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .batch-count {
+            font-size: 0.95rem;
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+        
+        .plan-type-tag {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+        
+        .short-term-tag {
+            background-color: #ffeaa7;
+            color: #d35400;
+        }
+        
+        .mid-term-tag {
+            background-color: #81ecec;
+            color: #00b894;
+        }
+        
+        .long-term-tag {
+            background-color: #a29bfe;
+            color: #6c5ce7;
+        }
+        
+        .expired-tag {
+            background-color: #fab1a0;
+            color: #d63031;
+        }
+        
+        .completed-tag {
+            background-color: #55efc4;
+            color: #00b894;
+        }
+        
+        .collapsed-section {
+            margin-bottom: 20px;
+        }
+        
+        .collapsed-header {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 12px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            border: 1px solid #e9ecef;
+            margin-bottom: 10px;
+        }
+        
+        .collapsed-header:hover {
+            background-color: #e9ecef;
+        }
+        
+        .collapsed-title {
+            font-weight: 600;
+            color: #495057;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .collapsed-count {
+            background-color: var(--secondary-color);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.85rem;
+        }
+        
+        .collapsed-content {
+            display: none;
+        }
+        
+        .collapsed-content.expanded {
+            display: block;
+        }
+        
+        .collapsed-icon {
+            transition: transform 0.3s ease;
+        }
+        
+        .collapsed-icon.rotated {
+            transform: rotate(90deg);
+        }
+        
+        .plan-item.collapsed {
+            padding: 10px 16px;
+            margin-bottom: 8px;
+            opacity: 0.7;
+        }
+        
+        .duplicate-warning {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-bottom: 15px;
+            color: #856404;
+        }
+        
+        .duplicate-list {
+            margin-top: 8px;
+            padding-left: 20px;
+        }
+        
+        .duplicate-item {
+            margin-bottom: 4px;
+            font-size: 0.9rem;
+        }
+        
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            padding: 15px 20px;
+            box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            z-index: 1000;
+        }
+        
+        .bottom-nav .btn {
+            padding: 12px 16px;
+            font-size: 0.95rem;
+            min-width: auto;
+            flex: 1;
+        }
+        
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+            padding: 12px 0;
+            border-top: 1px solid #e9ecef;
+            color: #6c757d;
+            font-size: 0.9rem;
+            flex-wrap: wrap;
+        }
+        
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex: 1;
+            min-width: 80px;
+        }
+        
+        .stat-value {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+        
+        .notification-settings {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .notification-settings h3 {
+            font-size: 1.1rem;
+            margin-bottom: 12px;
+            color: #495057;
+        }
+        
+        .notification-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .notification-toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .notification-toggle label {
+            font-size: 0.95rem;
+            color: #495057;
+        }
+        
+        .notification-test {
+            padding: 8px 16px;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+        
+        /* iOS风格开关 */
+        .ios-switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 28px;
+        }
+        
+        .ios-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .ios-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+        
+        .ios-slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        
+        input:checked + .ios-slider {
+            background-color: var(--success-color);
+        }
+        
+        input:checked + .ios-slider:before {
+            transform: translateX(22px);
+        }
+        
+        /* 弹窗通知样式 */
+        .notification-popup {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+            padding: 20px;
+            width: 320px;
+            max-width: 90%;
+            z-index: 9999;
+            animation: slideIn 0.5s ease-out;
+            border-left: 5px solid var(--primary-color);
+            display: none;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        .notification-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        
+        .notification-title {
+            font-weight: 700;
+            color: var(--primary-color);
+            font-size: 1.1rem;
+        }
+        
+        .notification-close {
+            background: none;
+            border: none;
+            color: #6c757d;
+            font-size: 1.2rem;
+            cursor: pointer;
+        }
+        
+        .notification-body {
+            margin-bottom: 15px;
+        }
+        
+        .notification-time {
+            color: var(--success-color);
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        .notification-content {
+            color: #495057;
+            line-height: 1.5;
+        }
+        
+        .notification-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+        
+        /* 统计模态框样式 */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 10000;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .modal {
+            background: white;
+            border-radius: 12px;
+            width: 100%;
+            max-width: 800px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            animation: modalSlideIn 0.3s ease-out;
+        }
+        
+        @keyframes modalSlideIn {
+            from {
+                transform: translateY(-30px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        
+        .modal-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .modal-header h2 {
+            color: #2c3e50;
+            font-size: 1.5rem;
+            margin: 0;
+        }
+        
+        .modal-close {
+            background: none;
+            border: none;
+            color: #6c757d;
+            font-size: 1.5rem;
+            cursor: pointer;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: var(--transition);
+        }
+        
+        .modal-close:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .modal-body {
+            padding: 24px;
+        }
+        
+        .period-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .period-btn {
+            padding: 10px 16px;
+            background: #e9ecef;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        
+        .period-btn.active {
+            background: var(--primary-color);
+            color: white;
+        }
+        
+        .chart-container {
+            height: 300px;
+            margin-bottom: 30px;
+            position: relative;
+        }
+        
+        .reason-stats {
+            margin-top: 30px;
+        }
+        
+        .reason-stat-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            margin-bottom: 10px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #4b6cb7;
+        }
+        
+        .reason-name {
+            font-weight: 600;
+            color: #495057;
+        }
+        
+        .reason-count {
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+        
+        .reason-percentage {
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+        
+        .no-stats {
+            text-align: center;
+            padding: 40px 20px;
+            color: #6c757d;
+        }
+        
+        .no-stats i {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            color: #adb5bd;
+        }
+        
+        /* 加载动画 */
+        .loader {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .spinner {
+            border: 4px solid rgba(75, 108, 183, 0.2);
+            border-radius: 50%;
+            border-top: 4px solid var(--primary-color);
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* 响应式调整 */
+        @media (max-width: 375px) {
+            .container {
+                padding: 12px;
+                padding-bottom: 90px;
+            }
+            
+            header h1 {
+                font-size: 1.6rem;
+            }
+            
+            .btn {
+                min-width: 120px;
+                font-size: 0.95rem;
+                padding: 12px 16px;
+            }
+            
+            .time-inputs {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .time-input {
+                width: 100%;
+            }
+            
+            .date-range-row {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .modal-body {
+                padding: 16px;
+            }
+            
+            .period-selector {
+                flex-direction: column;
+            }
+            
+            .period-btn {
+                width: 100%;
+            }
+        }
+        
+        /* iPhone 11适配 - 安全区域 */
+        @supports (padding: max(0px)) {
+            .container {
+                padding-left: max(16px, env(safe-area-inset-left));
+                padding-right: max(16px, env(safe-area-inset-right));
+                padding-bottom: max(90px, env(safe-area-inset-bottom) + 70px);
+            }
+            
+            .bottom-nav {
+                padding-bottom: max(15px, env(safe-area-inset-bottom));
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-calendar-alt"></i> 计划表工具</h1>
+            <p>导入文本自动生成计划表，支持时间提醒和Excel导出</p>
+        </header>
+        
+        <div class="card">
+            <h2 class="card-title"><i class="fas fa-file-import"></i> 文本导入</h2>
+            <textarea id="textInput" placeholder="请粘贴或输入包含时间信息的文本，例如：
+9:00-10:00 团队晨会，讨论项目进度
+10:30-11:30 完成项目报告初稿
+14:00-15:30 客户会议
+明天9:00 项目启动会
+明天09:00-10:30 团队会议
+2026年1月30日9:00-10:30 年度规划会议
+2026年1月30日-2026年2月30日 项目第一阶段
+1月30日-2月20日 春节前后工作计划
+1月30日9:00 月度总结会，讨论知识点
+1月30日9：00-10:00 项目评审
+30日9:00 部门例会，学习新知识点
+30日9：00-10：00 培训会议
+下周一下午2点 部门培训
+30日-31日 月底结算
+
+每行一个任务，时间与内容用空格分开。支持智能去重，重复计划不会重复导入。">9:00-10:00 团队晨会，讨论项目进度
+10:30-11:30 完成项目报告初稿
+14:00-15:30 客户会议，演示产品功能
+16:00 提交周报
+明天9:00 项目启动会
+明天09:00-10:30 团队会议
+2026年1月30日9:00-10:30 年度规划会议
+2026年1月30日-2026年2月30日 项目第一阶段
+1月30日-2月20日 春节前后工作计划
+1月30日9:00 月度总结会，讨论知识点
+1月30日9：00-10:00 项目评审
+30日9:00 部门例会，学习新知识点
+30日9：00-10：00 培训会议
+下周一下午2点 部门培训
+30日-31日 月底结算</textarea>
+            
+            <div class="instructions">
+                <h3><i class="fas fa-lightbulb"></i> 使用提示</h3>
+                <ul>
+                    <li><strong>智能日期识别</strong>：未指定年份默认为今年，未指定月份默认为本月</li>
+                    <li><strong>时间格式</strong>：9:00, 09:00-10:30, 明天9:00, 明天09:00-10:30</li>
+                    <li><strong>日期格式</strong>：1月30日, 30日, 1月30日9:00, 1月30日9:00-10:00</li>
+                    <li><strong>日期范围</strong>：1月30日-2月20日, 30日-31日, 2026年1月30日-2026年2月30日</li>
+                    <li><strong>智能去重</strong>：相同内容和时间的计划不会重复导入</li>
+                </ul>
+            </div>
+            
+            <div class="button-group">
+                <button id="generateBtn" class="btn">
+                    <i class="fas fa-magic"></i> 生成计划表
+                </button>
+                <button id="clearBtn" class="btn btn-secondary">
+                    <i class="fas fa-eraser"></i> 清空
+                </button>
+                <button id="batchDeleteBtn" class="btn btn-danger" style="display: none;">
+                    <i class="fas fa-trash-alt"></i> 批量删除
+                </button>
+            </div>
+        </div>
+        
+        <div id="batchControls" class="batch-controls" style="display: none;">
+            <div class="batch-count">
+                已选择 <span id="selectedCount">0</span> 项
+            </div>
+            <div class="batch-actions">
+                <button id="selectAllBtn" class="btn btn-secondary" style="padding: 8px 12px; font-size: 0.9rem;">
+                    <i class="fas fa-check-double"></i> 全选
+                </button>
+                <button id="cancelBatchBtn" class="btn btn-secondary" style="padding: 8px 12px; font-size: 0.9rem;">
+                    <i class="fas fa-times"></i> 取消
+                </button>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2 class="card-title"><i class="fas fa-tasks"></i> 计划表
+                <button id="toggleBatchModeBtn" class="btn btn-secondary" style="margin-left: auto; padding: 8px 12px; font-size: 0.9rem;">
+                    <i class="fas fa-check-square"></i> 批量模式
+                </button>
+            </h2>
+            
+            <div id="planList" class="plan-list">
+                <div class="empty-state">
+                    <i class="far fa-calendar-plus"></i>
+                    <h3>暂无工作计划</h3>
+                    <p>请在上方导入文本并点击"生成计划表"</p>
+                </div>
+            </div>
+            
+            <div class="stats">
+                <div class="stat-item">
+                    <div class="stat-value" id="totalTasks">0</div>
+                    <div>总任务</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="completedTasks">0</div>
+                    <div>已完成</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="pendingTasks">0</div>
+                    <div>待完成</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="expiredTasks">0</div>
+                    <div>已过期</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="loader" id="loader">
+            <div class="spinner"></div>
+            <p>正在处理...</p>
+        </div>
+    </div>
+    
+    <!-- 统计模态框 -->
+    <div class="modal-overlay" id="statsModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2><i class="fas fa-chart-pie"></i> 未完成原因统计</h2>
+                <button class="modal-close" id="closeStatsModalBtn">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="period-selector">
+                    <button class="period-btn active" data-period="week">本周</button>
+                    <button class="period-btn" data-period="month">本月</button>
+                    <button class="period-btn" data-period="year">本年</button>
+                    <button class="period-btn" data-period="all">全部</button>
+                </div>
+                
+                <div class="chart-container">
+                    <canvas id="statsChart"></canvas>
+                </div>
+                
+                <div class="reason-stats" id="reasonStats">
+                    <div class="no-stats">
+                        <i class="fas fa-chart-bar"></i>
+                        <h3>暂无未完成任务的统计信息</h3>
+                        <p>请先标记一些任务为未完成并选择原因</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 底部导航栏 -->
+    <div class="bottom-nav">
+        <button id="addRowBtn" class="btn btn-success">
+            <i class="fas fa-plus"></i> 添加
+        </button>
+        <button id="sortBtn" class="btn btn-secondary">
+            <i class="fas fa-sort-amount-up"></i> 排序
+        </button>
+        <button id="statsBtn" class="btn btn-info">
+            <i class="fas fa-chart-pie"></i> 统计
+        </button>
+        <button id="exportBtn" class="btn btn-export">
+            <i class="fas fa-file-excel"></i> 导出
+        </button>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 获取DOM元素
+            const textInput = document.getElementById('textInput');
+            const generateBtn = document.getElementById('generateBtn');
+            const clearBtn = document.getElementById('clearBtn');
+            const planList = document.getElementById('planList');
+            const addRowBtn = document.getElementById('addRowBtn');
+            const exportBtn = document.getElementById('exportBtn');
+            const sortBtn = document.getElementById('sortBtn');
+            const statsBtn = document.getElementById('statsBtn');
+            const totalTasksEl = document.getElementById('totalTasks');
+            const completedTasksEl = document.getElementById('completedTasks');
+            const pendingTasksEl = document.getElementById('pendingTasks');
+            const expiredTasksEl = document.getElementById('expiredTasks');
+            const loader = document.getElementById('loader');
+            const batchControls = document.getElementById('batchControls');
+            const toggleBatchModeBtn = document.getElementById('toggleBatchModeBtn');
+            const batchDeleteBtn = document.getElementById('batchDeleteBtn');
+            const selectAllBtn = document.getElementById('selectAllBtn');
+            const cancelBatchBtn = document.getElementById('cancelBatchBtn');
+            const selectedCount = document.getElementById('selectedCount');
+            const statsModal = document.getElementById('statsModal');
+            const closeStatsModalBtn = document.getElementById('closeStatsModalBtn');
+            const periodBtns = document.querySelectorAll('.period-btn');
+            const statsChartCanvas = document.getElementById('statsChart');
+            const reasonStats = document.getElementById('reasonStats');
+            
+            // 工作计划数据
+            let plans = [];
+            let planIdCounter = 1;
+            let isBatchMode = false;
+            let selectedPlans = new Set();
+            let statsChart = null;
+            
+            // 未完成原因选项
+            const incompleteReasons = [
+                { id: 'interrupted', name: '被人打断', color: '#ff6b6b' },
+                { id: 'distracted', name: '无法专注', color: '#4ecdc4' },
+                { id: 'wrong_setting', name: '设置错误', color: '#ffd166' },
+                { id: 'other', name: '其他', color: '#6a0572' }
+            ];
+            
+            // 初始化
+            function init() {
+                // 从本地存储加载数据
+                loadFromLocalStorage();
+                
+                // 绑定事件
+                bindEvents();
+                
+                // 更新统计
+                updateStats();
+            }
+            
+            // 绑定事件
+            function bindEvents() {
+                generateBtn.addEventListener('click', generatePlanFromText);
+                clearBtn.addEventListener('click', () => textInput.value = '');
+                addRowBtn.addEventListener('click', addNewPlan);
+                exportBtn.addEventListener('click', exportToExcel);
+                sortBtn.addEventListener('click', sortPlansByTime);
+                statsBtn.addEventListener('click', showStatsModal);
+                toggleBatchModeBtn.addEventListener('click', toggleBatchMode);
+                batchDeleteBtn.addEventListener('click', batchDeletePlans);
+                selectAllBtn.addEventListener('click', selectAllPlans);
+                cancelBatchBtn.addEventListener('click', cancelBatchMode);
+                closeStatsModalBtn.addEventListener('click', () => statsModal.style.display = 'none');
+                
+                // 统计周期按钮事件
+                periodBtns.forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        // 移除所有按钮的active类
+                        periodBtns.forEach(b => b.classList.remove('active'));
+                        // 给当前按钮添加active类
+                        this.classList.add('active');
+                        // 更新统计图表
+                        updateStatsChart(this.dataset.period);
+                    });
+                });
+                
+                // 点击模态框外部关闭模态框
+                statsModal.addEventListener('click', function(e) {
+                    if (e.target === statsModal) {
+                        statsModal.style.display = 'none';
+                    }
+                });
+                
+                // 处理iOS点击延迟
+                document.addEventListener('touchstart', function() {}, {passive: true});
+            }
+            
+            // 从文本生成计划
+            function generatePlanFromText() {
+                showLoader();
+                
+                setTimeout(() => {
+                    const text = textInput.value.trim();
+                    if (!text) {
+                        alert('请输入文本内容');
+                        hideLoader();
+                        return;
+                    }
+                    
+                    // 记录新导入的计划
+                    const newPlans = [];
+                    const duplicatePlans = [];
+                    selectedPlans.clear();
+                    
+                    // 按行分割文本
+                    const lines = text.split('\n');
+                    
+                    lines.forEach((line, index) => {
+                        line = line.trim();
+                        if (!line) return;
+                        
+                        // 解析时间和内容
+                        const plan = parsePlanLine(line, index);
+                        if (plan) {
+                            // 检查是否重复
+                            const isDuplicate = checkDuplicatePlan(plan);
+                            
+                            if (isDuplicate) {
+                                duplicatePlans.push({
+                                    line: line,
+                                    index: index + 1
+                                });
+                            } else {
+                                plan.id = planIdCounter++;
+                                newPlans.push(plan);
+                            }
+                        }
+                    });
+                    
+                    // 添加新计划到总列表
+                    plans.push(...newPlans);
+                    
+                    // 按开始时间排序
+                    sortPlansByTime();
+                    
+                    // 渲染计划列表
+                    renderPlanList();
+                    
+                    // 保存到本地存储
+                    saveToLocalStorage();
+                    
+                    // 更新统计
+                    updateStats();
+                    
+                    hideLoader();
+                    
+                    // 显示结果消息
+                    if (newPlans.length > 0) {
+                        Toastify({
+                            text: `成功导入 ${newPlans.length} 个新计划`,
+                            duration: 3000,
+                            gravity: "top",
+                            position: "center",
+                            backgroundColor: "linear-gradient(to right, #00b09b, #96c93d)",
+                        }).showToast();
+                    }
+                    
+                    // 如果有重复的计划，显示提示
+                    if (duplicatePlans.length > 0) {
+                        showDuplicateWarning(duplicatePlans);
+                    }
+                }, 300);
+            }
+            
+            // 检查计划是否重复
+            function checkDuplicatePlan(newPlan) {
+                // 比较开始时间、结束时间和内容是否相同
+                return plans.some(existingPlan => {
+                    // 比较开始时间（精确到分钟）
+                    const startTimeMatch = 
+                        existingPlan.startTime.getFullYear() === newPlan.startTime.getFullYear() &&
+                        existingPlan.startTime.getMonth() === newPlan.startTime.getMonth() &&
+                        existingPlan.startTime.getDate() === newPlan.startTime.getDate() &&
+                        existingPlan.startTime.getHours() === newPlan.startTime.getHours() &&
+                        existingPlan.startTime.getMinutes() === newPlan.startTime.getMinutes();
+                    
+                    // 比较结束时间（精确到分钟）
+                    const endTimeMatch = 
+                        existingPlan.endTime.getFullYear() === newPlan.endTime.getFullYear() &&
+                        existingPlan.endTime.getMonth() === newPlan.endTime.getMonth() &&
+                        existingPlan.endTime.getDate() === newPlan.endTime.getDate() &&
+                        existingPlan.endTime.getHours() === newPlan.endTime.getHours() &&
+                        existingPlan.endTime.getMinutes() === newPlan.endTime.getMinutes();
+                    
+                    // 比较内容（去除首尾空格）
+                    const contentMatch = existingPlan.content.trim() === newPlan.content.trim();
+                    
+                    return startTimeMatch && endTimeMatch && contentMatch;
+                });
+            }
+            
+            // 显示重复计划警告
+            function showDuplicateWarning(duplicatePlans) {
+                let warningHTML = `
+                    <div class="duplicate-warning">
+                        <strong><i class="fas fa-exclamation-triangle"></i> 检测到 ${duplicatePlans.length} 个重复计划，已跳过导入：</strong>
+                        <div class="duplicate-list">
+                `;
+                
+                // 最多显示5个重复计划
+                const displayCount = Math.min(duplicatePlans.length, 5);
+                for (let i = 0; i < displayCount; i++) {
+                    warningHTML += `
+                        <div class="duplicate-item">
+                            第${duplicatePlans[i].index}行: ${duplicatePlans[i].line}
+                        </div>
+                    `;
+                }
+                
+                if (duplicatePlans.length > 5) {
+                    warningHTML += `
+                        <div class="duplicate-item">
+                            ... 还有 ${duplicatePlans.length - 5} 个重复计划
+                        </div>
+                    `;
+                }
+                
+                warningHTML += `
+                        </div>
+                        <div style="margin-top: 8px; font-size: 0.85rem;">
+                            <i class="fas fa-info-circle"></i> 相同时间和内容的计划不会重复导入，避免覆盖已有状态。
+                        </div>
+                    </div>
+                `;
+                
+                // 在计划列表上方显示警告
+                const planListContainer = document.querySelector('.plan-list');
+                if (planListContainer) {
+                    planListContainer.insertAdjacentHTML('afterbegin', warningHTML);
+                    
+                    // 5秒后自动移除警告
+                    setTimeout(() => {
+                        const warning = document.querySelector('.duplicate-warning');
+                        if (warning) {
+                            warning.style.opacity = '0';
+                            warning.style.transition = 'opacity 0.5s ease';
+                            setTimeout(() => warning.remove(), 500);
+                        }
+                    }, 8000);
+                }
+            }
+            
+            // 解析单行计划文本 - 优化版本，修复时间识别和日期显示问题
+            function parsePlanLine(line, index) {
+                // 获取当前日期
+                const now = new Date();
+                const currentYear = now.getFullYear();
+                const currentMonth = now.getMonth();
+                const currentDate = now.getDate();
+                
+                // 保存原始行用于提取内容
+                const originalLine = line;
+                
+                // 日期关键词映射
+                const dateKeywords = {
+                    '今天': 0,
+                    '明天': 1,
+                    '后天': 2,
+                    '大后天': 3,
+                    '下周': 7,
+                    '下周一': getDaysUntilNextDay(1),
+                    '下周二': getDaysUntilNextDay(2),
+                    '下周三': getDaysUntilNextDay(3),
+                    '下周四': getDaysUntilNextDay(4),
+                    '下周五': getDaysUntilNextDay(5),
+                    '下周六': getDaysUntilNextDay(6),
+                    '下周日': getDaysUntilNextDay(0)
+                };
+                
+                // 初始化变量
+                let daysToAdd = 0;
+                let startDate = null;
+                let endDate = null;
+                let startTime = null;
+                let endTime = null;
+                let hasSpecificTime = false;
+                
+                // 处理相对日期关键词
+                for (const [keyword, days] of Object.entries(dateKeywords)) {
+                    if (line.includes(keyword)) {
+                        daysToAdd = days;
+                        line = line.replace(keyword, '').trim();
+                        break;
+                    }
+                }
+                
+                // 处理下午/上午关键词
+                let isAfternoon = false;
+                if (line.includes('下午')) {
+                    isAfternoon = true;
+                    line = line.replace('下午', '').trim();
+                } else if (line.includes('上午')) {
+                    line = line.replace('上午', '').trim();
+                }
+                
+                // 将中文标点转换为英文标点
+                line = line.replace(/：/g, ':').replace(/，/g, ',').replace(/。/g, '.').replace(/；/g, ';');
+                
+                // 处理"点"字表示的时间
+                line = line.replace(/(\d{1,2})点(\d{2})?/g, function(match, hour, minute) {
+                    if (minute) {
+                        return hour + ':' + minute;
+                    } else {
+                        return hour + ':00';
+                    }
+                });
+                
+                // 解析完整日期范围格式：2026年1月30日-2026年2月30日
+                const fullDateRangeMatch = line.match(/(\d{4})年(\d{1,2})月(\d{1,2})日\s*[-~到]\s*(\d{4})年(\d{1,2})月(\d{1,2})日/);
+                if (fullDateRangeMatch) {
+                    const [_, startYear, startMonth, startDay, endYear, endMonth, endDay] = fullDateRangeMatch;
+                    startDate = new Date(parseInt(startYear), parseInt(startMonth) - 1, parseInt(startDay), 0, 0, 0);
+                    endDate = new Date(parseInt(endYear), parseInt(endMonth) - 1, parseInt(endDay), 23, 59, 59);
+                    line = line.replace(fullDateRangeMatch[0], '').trim();
+                }
+                
+                // 解析月日范围格式：1月30日-2月20日
+                const monthDayRangeMatch = line.match(/(\d{1,2})月(\d{1,2})日\s*[-~到]\s*(\d{1,2})月(\d{1,2})日/);
+                if (monthDayRangeMatch && !startDate) {
+                    const [_, startMonth, startDay, endMonth, endDay] = monthDayRangeMatch;
+                    
+                    // 获取开始日期（今年）
+                    startDate = new Date(currentYear, parseInt(startMonth) - 1, parseInt(startDay), 0, 0, 0);
+                    endDate = new Date(currentYear, parseInt(endMonth) - 1, parseInt(endDay), 23, 59, 59);
+                    
+                    // 如果结束日期在开始日期之前，结束日期设为明年
+                    if (endDate < startDate) {
+                        endDate.setFullYear(currentYear + 1);
+                    }
+                    
+                    // 如果开始日期已经过去，设为明年
+                    if (startDate < now) {
+                        startDate.setFullYear(currentYear + 1);
+                        endDate.setFullYear(currentYear + 1);
+                    }
+                    
+                    line = line.replace(monthDayRangeMatch[0], '').trim();
+                }
+                
+                // 解析日范围格式：30日-31日
+                const dayRangeMatch = line.match(/(\d{1,2})日\s*[-~到]\s*(\d{1,2})日/);
+                if (dayRangeMatch && !startDate) {
+                    const [_, startDay, endDay] = dayRangeMatch;
+                    
+                    // 获取开始日期（本月）
+                    startDate = new Date(currentYear, currentMonth, parseInt(startDay), 0, 0, 0);
+                    endDate = new Date(currentYear, currentMonth, parseInt(endDay), 23, 59, 59);
+                    
+                    // 如果结束日期在开始日期之前，结束日期设为下个月
+                    if (endDate < startDate) {
+                        endDate.setMonth(currentMonth + 1);
+                    }
+                    
+                    // 如果开始日期已经过去，设为下个月
+                    if (startDate < now) {
+                        startDate.setMonth(currentMonth + 1);
+                        endDate.setMonth(currentMonth + 1);
+                    }
+                    
+                    line = line.replace(dayRangeMatch[0], '').trim();
+                }
+                
+                // 解析完整日期格式：2026年1月30日
+                const fullDateMatch = line.match(/(\d{4})年(\d{1,2})月(\d{1,2})日/);
+                if (fullDateMatch && !startDate) {
+                    const [_, year, month, day] = fullDateMatch;
+                    startDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), 0, 0, 0);
+                    endDate = new Date(startDate);
+                    line = line.replace(fullDateMatch[0], '').trim();
+                }
+                
+                // 解析月日格式：1月30日
+                const monthDayMatch = line.match(/(\d{1,2})月(\d{1,2})日/);
+                if (monthDayMatch && !startDate) {
+                    const [_, month, day] = monthDayMatch;
+                    startDate = new Date(currentYear, parseInt(month) - 1, parseInt(day), 0, 0, 0);
+                    endDate = new Date(startDate);
+                    
+                    // 如果日期已经过去，设为明年
+                    if (startDate < now) {
+                        startDate.setFullYear(currentYear + 1);
+                        endDate.setFullYear(currentYear + 1);
+                    }
+                    
+                    line = line.replace(monthDayMatch[0], '').trim();
+                }
+                
+                // 解析日格式：30日
+                const dayMatch = line.match(/(\d{1,2})日/);
+                if (dayMatch && !startDate) {
+                    const [_, day] = dayMatch;
+                    startDate = new Date(currentYear, currentMonth, parseInt(day), 0, 0, 0);
+                    endDate = new Date(startDate);
+                    
+                    // 如果日期已经过去，设为下个月
+                    if (startDate < now) {
+                        startDate.setMonth(currentMonth + 1);
+                        endDate.setMonth(currentMonth + 1);
+                    }
+                    
+                    line = line.replace(dayMatch[0], '').trim();
+                }
+                
+                // 如果没有解析到具体日期，使用当前日期加上相对天数
+                if (!startDate) {
+                    startDate = new Date(currentYear, currentMonth, currentDate + daysToAdd, 0, 0, 0);
+                    endDate = new Date(startDate);
+                }
+                
+                // 解析时间范围（支持多种格式）
+                const timeRangePattern = /(\d{1,2}):?(\d{2})?\s*[-~到]\s*(\d{1,2}):?(\d{2})?/;
+                const timeRangeMatch = line.match(timeRangePattern);
+                
+                if (timeRangeMatch) {
+                    hasSpecificTime = true;
+                    const [_, startHour, startMinute, endHour, endMinute] = timeRangeMatch;
+                    
+                    // 解析开始时间
+                    const startHourNum = parseInt(startHour);
+                    const startMinuteNum = startMinute ? parseInt(startMinute) : 0;
+                    
+                    // 解析结束时间
+                    const endHourNum = parseInt(endHour);
+                    const endMinuteNum = endMinute ? parseInt(endMinute) : 0;
+                    
+                    // 设置开始时间
+                    startTime = new Date(startDate);
+                    let adjustedStartHour = startHourNum;
+                    if (isAfternoon && adjustedStartHour < 12) {
+                        adjustedStartHour += 12;
+                    }
+                    startTime.setHours(adjustedStartHour, startMinuteNum, 0, 0);
+                    
+                    // 设置结束时间
+                    endTime = new Date(startDate);
+                    let adjustedEndHour = endHourNum;
+                    if (isAfternoon && adjustedEndHour < 12) {
+                        adjustedEndHour += 12;
+                    }
+                    endTime.setHours(adjustedEndHour, endMinuteNum, 0, 0);
+                    
+                    // 如果结束时间小于或等于开始时间，则结束时间加一天
+                    if (endTime <= startTime) {
+                        endTime.setDate(endTime.getDate() + 1);
+                    }
+                    
+                    // 从行中移除时间范围
+                    line = line.replace(timeRangeMatch[0], '').trim();
+                } 
+                // 解析单个时间点
+                else {
+                    const singleTimePattern = /(\d{1,2}):?(\d{2})?/;
+                    const singleTimeMatch = line.match(singleTimePattern);
+                    
+                    if (singleTimeMatch) {
+                        hasSpecificTime = true;
+                        const [_, hour, minute] = singleTimeMatch;
+                        
+                        const hourNum = parseInt(hour);
+                        const minuteNum = minute ? parseInt(minute) : 0;
+                        
+                        // 设置开始时间
+                        startTime = new Date(startDate);
+                        let adjustedHour = hourNum;
+                        if (isAfternoon && adjustedHour < 12) {
+                            adjustedHour += 12;
+                        }
+                        startTime.setHours(adjustedHour, minuteNum, 0, 0);
+                        
+                        // 默认持续1小时
+                        endTime = new Date(startTime);
+                        endTime.setHours(startTime.getHours() + 1);
+                        
+                        // 从行中移除时间
+                        line = line.replace(singleTimeMatch[0], '').trim();
+                    }
+                }
+                
+                // 如果没有解析到具体时间，使用日期作为全天任务
+                if (!hasSpecificTime) {
+                    startTime = new Date(startDate);
+                    endTime = new Date(endDate);
+                    
+                    // 全天任务：开始时间为当天0点，结束时间为当天23:59
+                    startTime.setHours(0, 0, 0, 0);
+                    endTime.setHours(23, 59, 59, 999);
+                }
+                
+                // 提取内容（移除所有日期时间标记后的剩余部分）
+                let content = line.trim();
+                
+                // 如果内容为空，使用原始行的内容
+                if (!content) {
+                    content = originalLine;
+                    // 尝试从原始行中移除日期时间部分
+                    content = content.replace(/(\d{4})年(\d{1,2})月(\d{1,2})日\s*[-~到]\s*(\d{4})年(\d{1,2})月(\d{1,2})日/g, '');
+                    content = content.replace(/(\d{1,2})月(\d{1,2})日\s*[-~到]\s*(\d{1,2})月(\d{1,2})日/g, '');
+                    content = content.replace(/(\d{1,2})日\s*[-~到]\s*(\d{1,2})日/g, '');
+                    content = content.replace(/(\d{4})年(\d{1,2})月(\d{1,2})日/g, '');
+                    content = content.replace(/(\d{1,2})月(\d{1,2})日/g, '');
+                    content = content.replace(/(\d{1,2})日/g, '');
+                    content = content.replace(/(上午|下午)?\d{1,2}[:：]?\d{0,2}\s*[-~到]\s*(上午|下午)?\d{1,2}[:：]?\d{0,2}/g, '');
+                    content = content.replace(/(上午|下午)?\d{1,2}[:：]?\d{0,2}/g, '');
+                    content = content.replace(/(今天|明天|后天|大后天|下周|下周一|下周二|下周三|下周四|下周五|下周六|下周日)/g, '');
+                    content = content.replace(/\s+/g, ' ').trim();
+                }
+                
+                // 如果内容仍然为空，使用默认内容
+                if (!content) {
+                    content = `任务 ${index + 1}`;
+                }
+                
+                // 确定计划类型
+                const planType = getPlanType(startTime, endTime);
+                
+                return {
+                    startTime: startTime,
+                    endTime: endTime,
+                    content: content,
+                    completed: false,
+                    incompleteReason: '',
+                    otherReason: '',
+                    notes: '',
+                    planType: planType,
+                    notified: false,
+                    hasSpecificTime: hasSpecificTime
+                };
+            }
+            
+            // 获取距离下个周几的天数
+            function getDaysUntilNextDay(targetDay) {
+                const now = new Date();
+                const currentDay = now.getDay(); // 0=周日, 1=周一, ..., 6=周六
+                
+                let daysToAdd = targetDay - currentDay;
+                if (daysToAdd <= 0) {
+                    daysToAdd += 7;
+                }
+                
+                return daysToAdd;
+            }
+            
+            // 确定计划类型
+            function getPlanType(startTime, endTime) {
+                const duration = endTime - startTime;
+                const days = duration / (1000 * 60 * 60 * 24);
+                
+                if (days > 15) {
+                    return 'long-term'; // 长期计划
+                } else if (days > 7) {
+                    return 'mid-term'; // 中期计划
+                } else {
+                    return 'short-term'; // 短期计划
+                }
+            }
+            
+            // 获取计划类型标签
+            function getPlanTypeTag(planType) {
+                switch(planType) {
+                    case 'short-term':
+                        return '<span class="plan-type-tag short-term-tag">短期</span>';
+                    case 'mid-term':
+                        return '<span class="plan-type-tag mid-term-tag">中期</span>';
+                    case 'long-term':
+                        return '<span class="plan-type-tag long-term-tag">长期</span>';
+                    default:
+                        return '';
+                }
+            }
+            
+            // 渲染计划列表
+            function renderPlanList() {
+                if (plans.length === 0) {
+                    planList.innerHTML = `
+                        <div class="empty-state">
+                            <i class="far fa-calendar-plus"></i>
+                            <h3>暂无工作计划</h3>
+                            <p>请在上方导入文本并点击"生成计划表"</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                // 获取当前时间
+                const now = new Date();
+                const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                const yesterday = new Date(today);
+                yesterday.setDate(yesterday.getDate() - 1);
+                
+                // 分类计划
+                const activePlans = [];
+                const todayCompletedPlans = [];
+                const yesterdayCompletedPlans = [];
+                const olderCompletedPlans = [];
+                const expiredPlans = [];
+                
+                plans.forEach(plan => {
+                    // 检查是否过期（结束时间已过且未完成）
+                    const isExpired = !plan.completed && plan.endTime < now;
+                    
+                    if (isExpired) {
+                        expiredPlans.push(plan);
+                    } else if (plan.completed) {
+                        // 检查完成日期
+                        const planDate = new Date(plan.startTime.getFullYear(), plan.startTime.getMonth(), plan.startTime.getDate());
+                        
+                        if (planDate.getTime() === today.getTime()) {
+                            todayCompletedPlans.push(plan);
+                        } else if (planDate.getTime() === yesterday.getTime()) {
+                            yesterdayCompletedPlans.push(plan);
+                        } else {
+                            olderCompletedPlans.push(plan);
+                        }
+                    } else {
+                        activePlans.push(plan);
+                    }
+                });
+                
+                let planHTML = '';
+                
+                // 渲染活动计划
+                if (activePlans.length > 0) {
+                    planHTML += `<h3 style="margin-bottom: 15px; color: #495057;">活动计划 (${activePlans.length})</h3>`;
+                    activePlans.forEach(plan => {
+                        planHTML += renderPlanItem(plan, false);
+                    });
+                }
+                
+                // 渲染过期计划
+                if (expiredPlans.length > 0) {
+                    planHTML += `
+                        <div class="collapsed-section">
+                            <div class="collapsed-header" onclick="toggleCollapsedSection('expired')">
+                                <div class="collapsed-title">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    <span>已过期计划</span>
+                                    <span class="collapsed-count">${expiredPlans.length}</span>
+                                </div>
+                                <div class="collapsed-icon">
+                                    <i class="fas fa-chevron-right"></i>
+                                </div>
+                            </div>
+                            <div class="collapsed-content" id="expired-content">
+                    `;
+                    
+                    expiredPlans.forEach(plan => {
+                        planHTML += renderPlanItem(plan, true);
+                    });
+                    
+                    planHTML += `</div></div>`;
+                }
+                
+                // 渲染今天完成的计划
+                if (todayCompletedPlans.length > 0) {
+                    planHTML += `
+                        <div class="collapsed-section">
+                            <div class="collapsed-header" onclick="toggleCollapsedSection('today')">
+                                <div class="collapsed-title">
+                                    <i class="fas fa-check-circle"></i>
+                                    <span>今天完成的计划</span>
+                                    <span class="collapsed-count">${todayCompletedPlans.length}</span>
+                                </div>
+                                <div class="collapsed-icon">
+                                    <i class="fas fa-chevron-right"></i>
+                                </div>
+                            </div>
+                            <div class="collapsed-content" id="today-content">
+                    `;
+                    
+                    todayCompletedPlans.forEach(plan => {
+                        planHTML += renderPlanItem(plan, true);
+                    });
+                    
+                    planHTML += `</div></div>`;
+                }
+                
+                // 渲染昨天完成的计划
+                if (yesterdayCompletedPlans.length > 0) {
+                    planHTML += `
+                        <div class="collapsed-section">
+                            <div class="collapsed-header" onclick="toggleCollapsedSection('yesterday')">
+                                <div class="collapsed-title">
+                                    <i class="fas fa-check-circle"></i>
+                                    <span>昨天完成的计划</span>
+                                    <span class="collapsed-count">${yesterdayCompletedPlans.length}</span>
+                                </div>
+                                <div class="collapsed-icon">
+                                    <i class="fas fa-chevron-right"></i>
+                                </div>
+                            </div>
+                            <div class="collapsed-content" id="yesterday-content">
+                    `;
+                    
+                    yesterdayCompletedPlans.forEach(plan => {
+                        planHTML += renderPlanItem(plan, true);
+                    });
+                    
+                    planHTML += `</div></div>`;
+                }
+                
+                // 渲染更早完成的计划
+                if (olderCompletedPlans.length > 0) {
+                    planHTML += `
+                        <div class="collapsed-section">
+                            <div class="collapsed-header" onclick="toggleCollapsedSection('older')">
+                                <div class="collapsed-title">
+                                    <i class="fas fa-history"></i>
+                                    <span>更早完成的计划</span>
+                                    <span class="collapsed-count">${olderCompletedPlans.length}</span>
+                                </div>
+                                <div class="collapsed-icon">
+                                    <i class="fas fa-chevron-right"></i>
+                                </div>
+                            </div>
+                            <div class="collapsed-content" id="older-content">
+                    `;
+                    
+                    olderCompletedPlans.forEach(plan => {
+                        planHTML += renderPlanItem(plan, true);
+                    });
+                    
+                    planHTML += `</div></div>`;
+                }
+                
+                planList.innerHTML = planHTML;
+                
+                // 绑定事件
+                bindPlanItemEvents();
+                
+                // 更新批量删除按钮状态
+                updateBatchDeleteButton();
+            }
+            
+            // 渲染单个计划项
+            function renderPlanItem(plan, isCollapsed) {
+                const startTimeStr = formatTime(plan.startTime);
+                const endTimeStr = formatTime(plan.endTime);
+                const startDateStr = formatDate(plan.startTime);
+                const endDateStr = formatDate(plan.endTime);
+                
+                // 检查是否过期（结束时间已过且未完成）
+                const now = new Date();
+                const isExpired = !plan.completed && plan.endTime < now;
+                
+                // 检查是否是即将开始的任务（15分钟内）
+                const timeUntilStart = plan.startTime - now;
+                const minutesUntilStart = timeUntilStart / (1000 * 60);
+                const isUrgent = !plan.completed && !isExpired && minutesUntilStart > 0 && minutesUntilStart <= 15;
+                
+                // 检查是否被选中（批量模式）
+                const isSelected = selectedPlans.has(plan.id);
+                
+                // 获取计划类型标签
+                const planTypeTag = getPlanTypeTag(plan.planType);
+                
+                // 检查是否同一天
+                const isSameDay = plan.startTime.toDateString() === plan.endTime.toDateString();
+                
+                // 检查是否有具体时间
+                const hasSpecificTime = plan.hasSpecificTime !== false;
+                
+                // 构建时间显示
+                let timeDisplay = '';
+                let dateDisplay = '';
+                
+                if (hasSpecificTime) {
+                    if (isSameDay) {
+                        timeDisplay = `${startTimeStr} - ${endTimeStr}`;
+                        dateDisplay = startDateStr;
+                    } else {
+                        timeDisplay = `${startTimeStr} - ${endTimeStr}`;
+                        dateDisplay = `${startDateStr} - ${endDateStr}`;
+                    }
+                } else {
+                    // 没有具体时间，只显示日期范围
+                    if (isSameDay) {
+                        dateDisplay = startDateStr;
+                    } else {
+                        dateDisplay = `${startDateStr} - ${endDateStr}`;
+                    }
+                }
+                
+                // 构建未完成原因选择器HTML
+                let reasonSelectorHTML = '';
+                if (!plan.completed) {
+                    reasonSelectorHTML = `
+                        <div class="reason-selector">
+                            <label class="reason-label">未完成原因：</label>
+                            <select class="reason-select" data-id="${plan.id}">
+                                <option value="">请选择原因（可选）</option>
+                                ${incompleteReasons.map(reason => 
+                                    `<option value="${reason.id}" ${plan.incompleteReason === reason.id ? 'selected' : ''}>${reason.name}</option>`
+                                ).join('')}
+                            </select>
+                            <input type="text" class="other-reason-input" data-id="${plan.id}" 
+                                   placeholder="请输入具体原因" value="${escapeHtml(plan.otherReason)}" 
+                                   style="${plan.incompleteReason === 'other' ? 'display: block;' : 'display: none;'}">
+                        </div>
+                    `;
+                }
+                
+                // 添加过期标签
+                const expiredTag = isExpired ? '<span class="plan-type-tag expired-tag">已过期</span>' : '';
+                const completedTag = plan.completed ? '<span class="plan-type-tag completed-tag">已完成</span>' : '';
+                
+                return `
+                    <div class="plan-item ${plan.completed ? 'completed' : ''} ${isUrgent ? 'urgent' : ''} ${isExpired ? 'expired' : ''} ${plan.planType} ${isSelected ? 'selected' : ''} ${isCollapsed ? 'collapsed' : ''}" data-id="${plan.id}">
+                        <div class="plan-header">
+                            ${isBatchMode ? `<input type="checkbox" class="batch-checkbox" ${isSelected ? 'checked' : ''} data-id="${plan.id}">` : ''}
+                            <div class="plan-time">
+                                <i class="far fa-clock"></i>
+                                ${hasSpecificTime ? timeDisplay + ' ' : ''}
+                                <span style="font-size: 0.85rem; color: #6c757d; margin-left: ${hasSpecificTime ? '0' : '5'}px;">${dateDisplay}</span>
+                                ${planTypeTag}
+                                ${expiredTag}
+                                ${completedTag}
+                            </div>
+                            <div class="plan-status">
+                                <div class="checkbox-container">
+                                    <input type="checkbox" class="custom-checkbox" ${plan.completed ? 'checked' : ''} data-id="${plan.id}">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="plan-content" contenteditable="true" data-id="${plan.id}">${escapeHtml(plan.content)}</div>
+                        
+                        <div class="plan-notes" contenteditable="true" placeholder="点击添加备注" data-id="${plan.id}">${escapeHtml(plan.notes)}</div>
+                        
+                        ${reasonSelectorHTML}
+                        
+                        <div class="plan-actions">
+                            ${renderDateRangeInputs(plan)}
+                            <div>
+                                <button class="action-btn delete" title="删除" data-id="${plan.id}">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // 渲染日期范围输入控件
+            function renderDateRangeInputs(plan) {
+                const startTimeStr = formatTime(plan.startTime);
+                const endTimeStr = formatTime(plan.endTime);
+                const startDateStr = formatDateForInput(plan.startTime);
+                const endDateStr = formatDateForInput(plan.endTime);
+                
+                // 检查是否同一天
+                const isSameDay = plan.startTime.toDateString() === plan.endTime.toDateString();
+                
+                if (isSameDay) {
+                    return `
+                        <div class="time-inputs">
+                            <input type="date" class="date-input start-date" value="${startDateStr}" data-id="${plan.id}">
+                            <input type="time" class="time-input start-time" value="${startTimeStr}" data-id="${plan.id}">
+                            <span style="color: #6c757d;">-</span>
+                            <input type="time" class="time-input end-time" value="${endTimeStr}" data-id="${plan.id}">
+                        </div>
+                    `;
+                } else {
+                    return `
+                        <div class="date-range-inputs">
+                            <div class="date-range-row">
+                                <span class="date-range-label">开始:</span>
+                                <input type="date" class="date-input start-date" value="${startDateStr}" data-id="${plan.id}">
+                                <input type="time" class="time-input start-time" value="${startTimeStr}" data-id="${plan.id}">
+                            </div>
+                            <div class="date-range-row">
+                                <span class="date-range-label">结束:</span>
+                                <input type="date" class="date-input end-date" value="${endDateStr}" data-id="${plan.id}">
+                                <input type="time" class="time-input end-time" value="${endTimeStr}" data-id="${plan.id}">
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+            
+            // 绑定计划项事件
+            function bindPlanItemEvents() {
+                // 复选框事件
+                document.querySelectorAll('.plan-item .custom-checkbox').forEach(checkbox => {
+                    checkbox.addEventListener('change', function() {
+                        const planId = parseInt(this.getAttribute('data-id'));
+                        const plan = plans.find(p => p.id === planId);
+                        
+                        if (plan) {
+                            plan.completed = this.checked;
+                            
+                            // 更新UI
+                            const planItem = this.closest('.plan-item');
+                            planItem.classList.toggle('completed', this.checked);
+                            planItem.classList.remove('urgent');
+                            
+                            // 显示或隐藏未完成原因选择器
+                            const reasonSelector = planItem.querySelector('.reason-selector');
+                            if (reasonSelector) {
+                                if (this.checked) {
+                                    reasonSelector.style.display = 'none';
+                                } else {
+                                    reasonSelector.style.display = 'block';
+                                }
+                            }
+                            
+                            updateStats();
+                            saveToLocalStorage();
+                            
+                            // 重新渲染列表以更新分类
+                            setTimeout(() => renderPlanList(), 100);
+                        }
+                    });
+                });
+                
+                // 批量选择复选框事件
+                document.querySelectorAll('.plan-item .batch-checkbox').forEach(checkbox => {
+                    checkbox.addEventListener('change', function() {
+                        const planId = parseInt(this.getAttribute('data-id'));
+                        const planItem = this.closest('.plan-item');
+                        
+                        if (this.checked) {
+                            selectedPlans.add(planId);
+                            planItem.classList.add('selected');
+                        } else {
+                            selectedPlans.delete(planId);
+                            planItem.classList.remove('selected');
+                        }
+                        
+                        updateSelectedCount();
+                        updateBatchDeleteButton();
+                    });
+                });
+                
+                // 日期输入事件
+                document.querySelectorAll('.plan-item .start-date, .plan-item .end-date').forEach(input => {
+                    input.addEventListener('change', function() {
+                        const planId = parseInt(this.getAttribute('data-id'));
+                        const plan = plans.find(p => p.id === planId);
+                        
+                        if (plan) {
+                            const dateValue = this.value;
+                            const [year, month, day] = dateValue.split('-').map(Number);
+                            
+                            if (this.classList.contains('start-date')) {
+                                plan.startTime.setFullYear(year, month - 1, day);
+                            } else {
+                                plan.endTime.setFullYear(year, month - 1, day);
+                                
+                                // 确保结束时间在开始时间之后
+                                if (plan.endTime <= plan.startTime) {
+                                    plan.endTime.setDate(plan.endTime.getDate() + 1);
+                                    this.value = formatDateForInput(plan.endTime);
+                                }
+                            }
+                            
+                            // 更新计划类型
+                            plan.planType = getPlanType(plan.startTime, plan.endTime);
+                            
+                            // 重置通知状态
+                            plan.notified = false;
+                            saveToLocalStorage();
+                            updateStats();
+                            
+                            // 重新渲染列表
+                            setTimeout(() => renderPlanList(), 100);
+                        }
+                    });
+                });
+                
+                // 时间输入事件
+                document.querySelectorAll('.plan-item .start-time, .plan-item .end-time').forEach(input => {
+                    input.addEventListener('change', function() {
+                        const planId = parseInt(this.getAttribute('data-id'));
+                        const plan = plans.find(p => p.id === planId);
+                        
+                        if (plan) {
+                            const timeValue = this.value;
+                            const [hours, minutes] = timeValue.split(':').map(Number);
+                            
+                            if (this.classList.contains('start-time')) {
+                                plan.startTime.setHours(hours, minutes, 0, 0);
+                                plan.hasSpecificTime = true;
+                            } else {
+                                plan.endTime.setHours(hours, minutes, 0, 0);
+                                plan.hasSpecificTime = true;
+                                
+                                // 确保结束时间在开始时间之后
+                                if (plan.endTime <= plan.startTime) {
+                                    plan.endTime.setDate(plan.endTime.getDate() + 1);
+                                    this.value = formatTime(plan.endTime);
+                                }
+                            }
+                            
+                            // 更新计划类型
+                            plan.planType = getPlanType(plan.startTime, plan.endTime);
+                            
+                            // 重置通知状态
+                            plan.notified = false;
+                            saveToLocalStorage();
+                            updateStats();
+                            
+                            // 重新渲染列表
+                            setTimeout(() => renderPlanList(), 100);
+                        }
+                    });
+                });
+                
+                // 任务内容编辑事件
+                document.querySelectorAll('.plan-item .plan-content').forEach(div => {
+                    div.addEventListener('blur', function() {
+                        const planId = parseInt(this.getAttribute('data-id'));
+                        const plan = plans.find(p => p.id === planId);
+                        
+                        if (plan) {
+                            plan.content = this.innerText.trim() || plan.content;
+                            saveToLocalStorage();
+                        }
+                    });
+                });
+                
+                // 备注编辑事件
+                document.querySelectorAll('.plan-item .plan-notes').forEach(div => {
+                    div.addEventListener('blur', function() {
+                        const planId = parseInt(this.getAttribute('data-id'));
+                        const plan = plans.find(p => p.id === planId);
+                        
+                        if (plan) {
+                            plan.notes = this.innerText.trim();
+                            saveToLocalStorage();
+                        }
+                    });
+                });
+                
+                // 未完成原因选择事件
+                document.querySelectorAll('.plan-item .reason-select').forEach(select => {
+                    select.addEventListener('change', function() {
+                        const planId = parseInt(this.getAttribute('data-id'));
+                        const plan = plans.find(p => p.id === planId);
+                        
+                        if (plan) {
+                            plan.incompleteReason = this.value;
+                            
+                            // 如果是"其他"，显示输入框
+                            const otherInput = this.parentElement.querySelector('.other-reason-input');
+                            if (this.value === 'other') {
+                                otherInput.style.display = 'block';
+                                if (plan.otherReason) {
+                                    otherInput.value = plan.otherReason;
+                                }
+                            } else {
+                                otherInput.style.display = 'none';
+                                plan.otherReason = '';
+                            }
+                            
+                            saveToLocalStorage();
+                        }
+                    });
+                });
+                
+                // 其他原因输入事件
+                document.querySelectorAll('.plan-item .other-reason-input').forEach(input => {
+                    input.addEventListener('blur', function() {
+                        const planId = parseInt(this.getAttribute('data-id'));
+                        const plan = plans.find(p => p.id === planId);
+                        
+                        if (plan) {
+                            plan.otherReason = this.value.trim();
+                            saveToLocalStorage();
+                        }
+                    });
+                });
+                
+                // 删除按钮事件
+                document.querySelectorAll('.plan-item .action-btn.delete').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const planId = parseInt(this.getAttribute('data-id'));
+                        
+                        if (confirm('确定要删除这个计划吗？')) {
+                            plans = plans.filter(p => p.id !== planId);
+                            selectedPlans.delete(planId);
+                            renderPlanList();
+                            updateStats();
+                            saveToLocalStorage();
+                            
+                            Toastify({
+                                text: "计划已删除",
+                                duration: 3000,
+                                gravity: "top",
+                                position: "center",
+                                backgroundColor: "linear-gradient(to right, #ff5e62, #ff9966)",
+                            }).showToast();
+                        }
+                    });
+                });
+            }
+            
+            // 切换折叠部分
+            window.toggleCollapsedSection = function(sectionId) {
+                const content = document.getElementById(`${sectionId}-content`);
+                const icon = document.querySelector(`#${sectionId}-content`).previousElementSibling.querySelector('.collapsed-icon i');
+                
+                if (content.classList.contains('expanded')) {
+                    content.classList.remove('expanded');
+                    icon.classList.remove('rotated');
+                } else {
+                    content.classList.add('expanded');
+                    icon.classList.add('rotated');
+                }
+            };
+            
+            // 添加新计划
+            function addNewPlan() {
+                // 确定新计划的开始时间（最后一个计划结束后1小时，或当前时间）
+                let startTime = new Date();
+                if (plans.length > 0) {
+                    // 找到最晚的结束时间
+                    const latestEndTime = plans.reduce((latest, plan) => {
+                        return plan.endTime > latest ? plan.endTime : latest;
+                    }, new Date(0));
+                    
+                    startTime = new Date(latestEndTime);
+                    startTime.setHours(startTime.getHours() + 1);
+                } else {
+                    // 如果没有现有计划，使用当前时间的小时数+1
+                    const now = new Date();
+                    startTime.setHours(now.getHours() + 1, 0, 0, 0);
+                }
+                
+                const endTime = new Date(startTime);
+                endTime.setHours(startTime.getHours() + 1);
+                
+                // 确定计划类型
+                const planType = getPlanType(startTime, endTime);
+                
+                // 创建新计划
+                const newPlan = {
+                    id: planIdCounter++,
+                    startTime: startTime,
+                    endTime: endTime,
+                    content: '新计划',
+                    completed: false,
+                    incompleteReason: '',
+                    otherReason: '',
+                    notes: '',
+                    planType: planType,
+                    notified: false,
+                    hasSpecificTime: true
+                };
+                
+                plans.push(newPlan);
+                renderPlanList();
+                updateStats();
+                saveToLocalStorage();
+                
+                // 滚动到新添加的计划
+                setTimeout(() => {
+                    const newPlanItem = document.querySelector(`.plan-item[data-id="${newPlan.id}"]`);
+                    if (newPlanItem) {
+                        newPlanItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                        
+                        // 聚焦到计划内容
+                        const planContentDiv = newPlanItem.querySelector('.plan-content');
+                        if (planContentDiv) {
+                            planContentDiv.focus();
+                        }
+                    }
+                }, 100);
+            }
+            
+            // 按时间排序
+            function sortPlansByTime() {
+                plans.sort((a, b) => a.startTime - b.startTime);
+                renderPlanList();
+                saveToLocalStorage();
+                
+                Toastify({
+                    text: "已按时间顺序排序",
+                    duration: 3000,
+                    gravity: "top",
+                    position: "center",
+                    backgroundColor: "linear-gradient(to right, #4b6cb7, #182848)",
+                }).showToast();
+            }
+            
+            // 导出为Excel
+            function exportToExcel() {
+                if (plans.length === 0) {
+                    alert('没有可导出的计划');
+                    return;
+                }
+                
+                showLoader();
+                
+                setTimeout(() => {
+                    // 创建工作簿
+                    const wb = XLSX.utils.book_new();
+                    wb.Props = {
+                        Title: "计划表",
+                        Subject: "工作计划",
+                        Author: "计划表工具",
+                        CreatedDate: new Date()
+                    };
+                    
+                    // 创建工作表数据
+                    const wsData = [
+                        ["计划表", "", "", "", "", "", "", ""],
+                        ["导出时间", new Date().toLocaleString(), "", "", "", "", "", ""],
+                        [],
+                        ["状态", "开始时间", "结束时间", "计划类型", "计划内容", "未完成原因", "具体原因", "备注"]
+                    ];
+                    
+                    plans.forEach(plan => {
+                        const status = plan.completed ? "已完成" : (plan.endTime < new Date() ? "已过期" : "未完成");
+                        const startTimeStr = formatDateTime(plan.startTime);
+                        const endTimeStr = formatDateTime(plan.endTime);
+                        const reason = incompleteReasons.find(r => r.id === plan.incompleteReason);
+                        const reasonName = reason ? reason.name : '';
+                        
+                        // 确定计划类型文字
+                        let planTypeStr = '';
+                        switch(plan.planType) {
+                            case 'short-term':
+                                planTypeStr = '短期计划';
+                                break;
+                            case 'mid-term':
+                                planTypeStr = '中期计划';
+                                break;
+                            case 'long-term':
+                                planTypeStr = '长期计划';
+                                break;
+                        }
+                        
+                        wsData.push([
+                            status,
+                            startTimeStr,
+                            endTimeStr,
+                            planTypeStr,
+                            plan.content,
+                            reasonName,
+                            plan.otherReason,
+                            plan.notes
+                        ]);
+                    });
+                    
+                    // 创建合并单元格范围
+                    const merge = [
+                        { s: { r: 0, c: 0 }, e: { r: 0, c: 7 } },
+                        { s: { r: 1, c: 0 }, e: { r: 1, c: 1 } }
+                    ];
+                    
+                    // 创建工作表
+                    const ws = XLSX.utils.aoa_to_sheet(wsData);
+                    
+                    // 设置列宽
+                    const colWidths = [
+                        { wch: 10 }, // 状态列
+                        { wch: 20 }, // 开始时间列
+                        { wch: 20 }, // 结束时间列
+                        { wch: 12 }, // 计划类型列
+                        { wch: 40 }, // 计划内容列
+                        { wch: 15 }, // 未完成原因列
+                        { wch: 20 }, // 具体原因列
+                        { wch: 30 }  // 备注列
+                    ];
+                    ws['!cols'] = colWidths;
+                    
+                    // 设置合并单元格
+                    ws['!merges'] = merge;
+                    
+                    // 将工作表添加到工作簿
+                    XLSX.utils.book_append_sheet(wb, ws, "工作计划");
+                    
+                    // 导出Excel文件
+                    const fileName = `计划表_${new Date().toISOString().split('T')[0]}.xlsx`;
+                    XLSX.writeFile(wb, fileName);
+                    
+                    hideLoader();
+                    
+                    Toastify({
+                        text: `已导出 ${plans.length} 个计划到Excel`,
+                        duration: 3000,
+                        gravity: "top",
+                        position: "center",
+                        backgroundColor: "linear-gradient(to right, #00b09b, #96c93d)",
+                    }).showToast();
+                }, 500);
+            }
+            
+            // 切换批量模式
+            function toggleBatchMode() {
+                isBatchMode = !isBatchMode;
+                
+                if (isBatchMode) {
+                    // 进入批量模式
+                    toggleBatchModeBtn.innerHTML = '<i class="fas fa-times"></i> 退出批量';
+                    toggleBatchModeBtn.classList.add('btn-warning');
+                    batchControls.style.display = 'flex';
+                    batchDeleteBtn.style.display = 'flex';
+                    selectedPlans.clear();
+                } else {
+                    // 退出批量模式
+                    toggleBatchModeBtn.innerHTML = '<i class="fas fa-check-square"></i> 批量模式';
+                    toggleBatchModeBtn.classList.remove('btn-warning');
+                    batchControls.style.display = 'none';
+                    batchDeleteBtn.style.display = 'none';
+                    selectedPlans.clear();
+                }
+                
+                renderPlanList();
+                updateSelectedCount();
+                updateBatchDeleteButton();
+            }
+            
+            // 更新选择计数
+            function updateSelectedCount() {
+                selectedCount.textContent = selectedPlans.size;
+            }
+            
+            // 更新批量删除按钮状态
+            function updateBatchDeleteButton() {
+                batchDeleteBtn.disabled = selectedPlans.size === 0;
+            }
+            
+            // 全选计划
+            function selectAllPlans() {
+                if (selectedPlans.size === plans.length) {
+                    // 如果已经全选，则取消全选
+                    selectedPlans.clear();
+                } else {
+                    // 全选所有计划
+                    plans.forEach(plan => {
+                        selectedPlans.add(plan.id);
+                    });
+                }
+                
+                renderPlanList();
+                updateSelectedCount();
+                updateBatchDeleteButton();
+            }
+            
+            // 取消批量模式
+            function cancelBatchMode() {
+                isBatchMode = false;
+                toggleBatchModeBtn.innerHTML = '<i class="fas fa-check-square"></i> 批量模式';
+                toggleBatchModeBtn.classList.remove('btn-warning');
+                batchControls.style.display = 'none';
+                batchDeleteBtn.style.display = 'none';
+                selectedPlans.clear();
+                
+                renderPlanList();
+            }
+            
+            // 批量删除计划
+            function batchDeletePlans() {
+                if (selectedPlans.size === 0) {
+                    alert('请先选择要删除的计划');
+                    return;
+                }
+                
+                if (confirm(`确定要删除选中的 ${selectedPlans.size} 个计划吗？`)) {
+                    // 过滤出未选中的计划
+                    plans = plans.filter(plan => !selectedPlans.has(plan.id));
+                    selectedPlans.clear();
+                    
+                    renderPlanList();
+                    updateStats();
+                    saveToLocalStorage();
+                    
+                    Toastify({
+                        text: `已删除 ${selectedPlans.size} 个计划`,
+                        duration: 3000,
+                        gravity: "top",
+                        position: "center",
+                        backgroundColor: "linear-gradient(to right, #ff5e62, #ff9966)",
+                    }).showToast();
+                    
+                    // 退出批量模式
+                    cancelBatchMode();
+                }
+            }
+            
+            // 显示统计模态框
+            function showStatsModal() {
+                statsModal.style.display = 'flex';
+                updateStatsChart('week');
+            }
+            
+            // 更新统计图表
+            function updateStatsChart(period) {
+                // 获取未完成的计划
+                const incompletePlans = plans.filter(plan => !plan.completed && plan.incompleteReason);
+                
+                if (incompletePlans.length === 0) {
+                    // 如果没有未完成计划，显示空状态
+                    reasonStats.innerHTML = `
+                        <div class="no-stats">
+                            <i class="fas fa-chart-bar"></i>
+                            <h3>暂无未完成任务的统计信息</h3>
+                            <p>请先标记一些任务为未完成并选择原因</p>
+                        </div>
+                    `;
+                    
+                    // 如果图表已存在，销毁它
+                    if (statsChart) {
+                        statsChart.destroy();
+                    }
+                    
+                    // 显示空图表
+                    const ctx = statsChartCanvas.getContext('2d');
+                    statsChart = new Chart(ctx, {
+                        type: 'doughnut',
+                        data: {
+                            labels: ['暂无数据'],
+                            datasets: [{
+                                data: [1],
+                                backgroundColor: ['#e9ecef'],
+                                borderWidth: 0
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    display: false
+                                },
+                                tooltip: {
+                                    enabled: false
+                                }
+                            }
+                        }
+                    });
+                    
+                    return;
+                }
+                
+                // 根据周期筛选计划
+                let filteredPlans = [];
+                const now = new Date();
+                
+                switch (period) {
+                    case 'week':
+                        // 本周
+                        const weekStart = new Date(now);
+                        weekStart.setDate(now.getDate() - now.getDay());
+                        weekStart.setHours(0, 0, 0, 0);
+                        
+                        filteredPlans = incompletePlans.filter(plan => 
+                            plan.startTime >= weekStart && plan.startTime <= now
+                        );
+                        break;
+                        
+                    case 'month':
+                        // 本月
+                        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+                        
+                        filteredPlans = incompletePlans.filter(plan => 
+                            plan.startTime >= monthStart && plan.startTime <= now
+                        );
+                        break;
+                        
+                    case 'year':
+                        // 本年
+                        const yearStart = new Date(now.getFullYear(), 0, 1);
+                        
+                        filteredPlans = incompletePlans.filter(plan => 
+                            plan.startTime >= yearStart && plan.startTime <= now
+                        );
+                        break;
+                        
+                    case 'all':
+                        // 全部
+                        filteredPlans = incompletePlans;
+                        break;
+                }
+                
+                // 统计各原因的数量
+                const reasonCounts = {};
+                incompleteReasons.forEach(reason => {
+                    reasonCounts[reason.id] = 0;
+                });
+                
+                filteredPlans.forEach(plan => {
+                    if (plan.incompleteReason && reasonCounts[plan.incompleteReason] !== undefined) {
+                        reasonCounts[plan.incompleteReason]++;
+                    }
+                });
+                
+                // 过滤出有数据的理由
+                const validReasons = incompleteReasons.filter(reason => reasonCounts[reason.id] > 0);
+                
+                // 准备图表数据
+                const chartLabels = validReasons.map(reason => reason.name);
+                const chartData = validReasons.map(reason => reasonCounts[reason.id]);
+                const chartColors = validReasons.map(reason => reason.color);
+                
+                // 更新图表
+                const ctx = statsChartCanvas.getContext('2d');
+                
+                // 如果图表已存在，销毁它
+                if (statsChart) {
+                    statsChart.destroy();
+                }
+                
+                statsChart = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: chartLabels,
+                        datasets: [{
+                            data: chartData,
+                            backgroundColor: chartColors,
+                            borderWidth: 0,
+                            hoverOffset: 10
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'right',
+                                labels: {
+                                    padding: 20,
+                                    usePointStyle: true,
+                                    pointStyle: 'circle'
+                                }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const label = context.label || '';
+                                        const value = context.raw || 0;
+                                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                        const percentage = total > 0 ? Math.round((value / total) * 100) : 0;
+                                        return `${label}: ${value} (${percentage}%)`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+                
+                // 更新统计列表
+                let statsHTML = '';
+                
+                validReasons.forEach(reason => {
+                    const count = reasonCounts[reason.id];
+                    const total = chartData.reduce((a, b) => a + b, 0);
+                    const percentage = total > 0 ? Math.round((count / total) * 100) : 0;
+                    
+                    statsHTML += `
+                        <div class="reason-stat-item">
+                            <div class="reason-name">${reason.name}</div>
+                            <div>
+                                <span class="reason-count">${count}</span>
+                                <span class="reason-percentage">(${percentage}%)</span>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                // 添加总计
+                if (validReasons.length > 0) {
+                    const total = chartData.reduce((a, b) => a + b, 0);
+                    statsHTML += `
+                        <div class="reason-stat-item" style="background-color: #f0f8ff; border-left-color: #4b6cb7;">
+                            <div class="reason-name" style="font-weight: 700;">总计</div>
+                            <div>
+                                <span class="reason-count">${total}</span>
+                                <span class="reason-percentage">(100%)</span>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                reasonStats.innerHTML = statsHTML;
+            }
+            
+            // 更新统计信息
+            function updateStats() {
+                const total = plans.length;
+                const completed = plans.filter(plan => plan.completed).length;
+                const pending = plans.filter(plan => !plan.completed && plan.endTime >= new Date()).length;
+                const expired = plans.filter(plan => !plan.completed && plan.endTime < new Date()).length;
+                
+                totalTasksEl.textContent = total;
+                completedTasksEl.textContent = completed;
+                pendingTasksEl.textContent = pending;
+                expiredTasksEl.textContent = expired;
+            }
+            
+            // 保存到本地存储
+            function saveToLocalStorage() {
+                const dataToSave = plans.map(plan => ({
+                    ...plan,
+                    startTime: plan.startTime.getTime(),
+                    endTime: plan.endTime.getTime()
+                }));
+                
+                localStorage.setItem('workPlans', JSON.stringify(dataToSave));
+                localStorage.setItem('planIdCounter', planIdCounter.toString());
+            }
+            
+            // 从本地存储加载
+            function loadFromLocalStorage() {
+                const savedPlans = localStorage.getItem('workPlans');
+                const savedIdCounter = localStorage.getItem('planIdCounter');
+                
+                if (savedPlans) {
+                    const parsedPlans = JSON.parse(savedPlans);
+                    
+                    plans = parsedPlans.map(plan => ({
+                        ...plan,
+                        startTime: new Date(plan.startTime),
+                        endTime: new Date(plan.endTime)
+                    }));
+                    
+                    planIdCounter = savedIdCounter ? parseInt(savedIdCounter) : 1;
+                    
+                    // 确保每个计划都有planType和hasSpecificTime属性
+                    plans.forEach(plan => {
+                        if (!plan.planType) {
+                            plan.planType = getPlanType(plan.startTime, plan.endTime);
+                        }
+                        if (plan.hasSpecificTime === undefined) {
+                            // 默认假设有具体时间
+                            plan.hasSpecificTime = true;
+                        }
+                    });
+                    
+                    // 渲染计划列表
+                    renderPlanList();
+                }
+            }
+            
+            // 显示加载动画
+            function showLoader() {
+                loader.style.display = 'block';
+            }
+            
+            // 隐藏加载动画
+            function hideLoader() {
+                loader.style.display = 'none';
+            }
+            
+            // 辅助函数：格式化时间
+            function formatTime(date) {
+                // 如果时间是0点，可能表示全天任务
+                if (date.getHours() === 0 && date.getMinutes() === 0) {
+                    return '';
+                }
+                const hours = date.getHours().toString().padStart(2, '0');
+                const minutes = date.getMinutes().toString().padStart(2, '0');
+                return `${hours}:${minutes}`;
+            }
+            
+            // 辅助函数：格式化日期
+            function formatDate(date) {
+                const now = new Date();
+                const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                const tomorrow = new Date(today);
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                
+                const targetDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+                
+                if (targetDate.getTime() === today.getTime()) {
+                    return '今天';
+                } else if (targetDate.getTime() === tomorrow.getTime()) {
+                    return '明天';
+                } else {
+                    const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+                    const month = date.getMonth() + 1;
+                    const day = date.getDate();
+                    const weekday = weekdays[date.getDay()];
+                    
+                    // 如果是今年，不显示年份
+                    if (date.getFullYear() === now.getFullYear()) {
+                        return `${month}月${day}日 ${weekday}`;
+                    } else {
+                        return `${date.getFullYear()}年${month}月${day}日 ${weekday}`;
+                    }
+                }
+            }
+            
+            // 辅助函数：格式化日期时间（用于Excel导出）
+            function formatDateTime(date) {
+                const year = date.getFullYear();
+                const month = (date.getMonth() + 1).toString().padStart(2, '0');
+                const day = date.getDate().toString().padStart(2, '0');
+                const hours = date.getHours().toString().padStart(2, '0');
+                const minutes = date.getMinutes().toString().padStart(2, '0');
+                
+                return `${year}-${month}-${day} ${hours}:${minutes}`;
+            }
+            
+            // 辅助函数：格式化日期用于输入框
+            function formatDateForInput(date) {
+                const year = date.getFullYear();
+                const month = (date.getMonth() + 1).toString().padStart(2, '0');
+                const day = date.getDate().toString().padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            }
+            
+            // 辅助函数：转义HTML
+            function escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+            
+            // 初始化应用
+            init();
+        });
+    </script>
+</body>
+</html>
